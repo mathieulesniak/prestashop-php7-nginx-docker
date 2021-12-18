@@ -1,4 +1,4 @@
-FROM php:7.3-fpm
+FROM php:7.2-fpm
 
 MAINTAINER Mathieu LESNIAK <mathieu@lesniak.fr>
 
@@ -22,11 +22,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -y && apt-get install -y --no-
     libzip-dev \
     libmagickwand-dev \
     unzip \
-    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pecl install mcrypt-1.0.2 \
+RUN pecl install mcrypt-1.0.2 memcached \
     && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/  \
-    && docker-php-ext-install -j$(nproc) iconv intl pdo_mysql mbstring soap gd zip  xml json mysqli opcache
+    && docker-php-ext-install -j$(nproc) iconv intl pdo_mysql mbstring soap gd zip xml json mysqli opcache \
+    && docker-php-ext-enable mcrypt memcached
 RUN { \
     echo '[mail function]'; \
     echo 'sendmail_path = "/usr/bin/msmtp -t"'; \
@@ -39,10 +40,16 @@ RUN { \
     echo 'opcache.max_accelerated_files=4000'; \
     echo 'opcache.revalidate_freq=2'; \
     echo 'opcache.fast_shutdown=1'; \
-    echo 'opcache.enable_cli=1'; \
+    echo 'opcache.enable_cli=0'; \
     } > /usr/local/etc/php/conf.d/opcache-recommended.ini
+# Prestashop settings
+RUN { \
+    echo 'memory_limit=256M'; \
+    echo 'upload_max_filesize=128M'; \
+    echo 'max_input_vars=5000'; \
+    echo "date.timezone='Europe/Paris'"; \
+    } > /usr/local/etc/php/conf.d/prestashop.ini
 
-# Composer
 RUN apt-get remove --purge curl -y && \
     apt-get clean && \
     apt-get purge && \
